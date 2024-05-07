@@ -65,17 +65,16 @@ How to deploy the application outside the dev environment.
 * Tip: try the tree bash command
 
 ```shell
-├───Docs
 ├───Shopping                                        //classes and packages
 │   ├───bin                                         //the binary to deploy on the end-user environment
-│   │   └───Debug
-│   └───obj
-│       └───Debug                                   
-└───TestShopping                                    //test classes
-    ├───bin
-    │   └───Debug
-    └───obj
-        └───Debug
+        
+├───.idea                                           //les informations sur le projet webstorm
+├───docs                                            //la documentation
+├───jest-test                                       //les classes de test
+└───public                                          //le dossier qui est publier dans firebase
+    └───View                                        //les différentes pages
+        └───content
+            └───logos                               //les fichiers des logos
 ```
 
 ## Collaborate
