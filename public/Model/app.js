@@ -1,22 +1,23 @@
-// Your web app's Firebase configuration
-import {initializeApp} from "./Firebase/firebase-app.js";
-import {
-    createUserWithEmailAndPassword,
-    getAuth, GoogleAuthProvider,
-    onAuthStateChanged,
-    signInWithEmailAndPassword,
-    signInWithPopup,
-    signOut
-} from "./Firebase/firebase-auth.js";
-import {
-    collection,
-    doc,
-    getDoc,
-    getFirestore, runTransaction,
-    Timestamp,
-    updateDoc
-} from "./Firebase/firebase-firestore.js";
-import {getStorage} from "./Firebase/firebase-storage.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { createUserWithEmailAndPassword, getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithEmailAndPassword, signInWithPopup, signOut } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import {  getFirestore, collection, doc, getDoc, setDoc, onSnapshot, orderBy, query, runTransaction, Timestamp, updateDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getStorage, ref as sRef, uploadBytesResumable, getDownloadURL} from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js';
+
+// Define the custom event
+const loggedChangeEvent = new Event('loggedChange');
+
+// Dispatch the event whenever the value of logged changes
+// For example, if you have a function that updates the login status, you can dispatch the event after the update
+function updateLoginStatus(newStatus) {
+    logged = newStatus;
+    // Dispatch the custom event
+    window.dispatchEvent(loggedChangeEvent);
+}
+
+let logged;
+let currentUser;
+let currentGroupID;
+let currentGroupListener; // Store reference to the current group listener
 
 const firebaseConfig = {
     apiKey: "AIzaSyDVW4ETUNqrCa_YZFtn3SLkE2BWvwMilrI",
@@ -34,20 +35,18 @@ const auth = getAuth(app);
 const db = getFirestore(app);// Initialize Cloud Firestore and get a reference to the service
 const storage = getStorage();
 
-let currentUser;
-let currentGroupID;
-let currentGroupListener; // Store reference to the current group listener
+export { logged, loggedChangeEvent};
 
 document.addEventListener('DOMContentLoaded', function () {
     // Check Auth state and change "logged" value
     onAuthStateChanged(auth, function (user) {
         if (user) {
-            localStorage.setItem('logged', "true"); // Store the value in local storage
             currentUser = user;
-            console.log("user logged in", user);
+            updateLoginStatus(true);
+            console.log("user logged in");
         } else {
-            localStorage.setItem('logged', "false"); // Store the value in local storage
             currentUser = "";
+            updateLoginStatus(false);
             console.log("user logged out");
         }
     });
@@ -61,7 +60,11 @@ document.addEventListener('DOMContentLoaded', function () {
         // Check the value of the 'page' parameter and take appropriate action
         switch (page) {
             case "discussions":
-                DisplayDiscussions();//Fetch groups and display the group names
+                // Example usage:
+                FetchDiscussions().then(discussions => {
+                    DisplayDiscussions(discussions, 'Open'); // Display open discussions
+                    // displayDiscussions(archivedDiscussions, 'Archived'); // Display archived discussions
+                });
                 break;
             case "profile":
                 DisplayProfileSettings();//Fetch profile settings property and display them
@@ -100,69 +103,127 @@ document.addEventListener('DOMContentLoaded', function () {
     // Call the function initially to handle the current URL state
     checkActionAndUpdate();
 
-    function DisplayDiscussions() {
-        // Reference to the "Discussions" collection
-        const UserdiscussionsRef = doc(db, "Discussions");
+    // Fetch discussions from Firestore
+    function FetchDiscussions() {
+        return new Promise((resolve, reject) => {
 
-        // Iterate over each document in the "Discussions" collection
-        discussionsRef.get().then((querySnapshot) => {
-            querySnapshot.forEach((doc) => {
-                const discussionName = doc.data().Name;
+            // Get the current user's discussions
+            const userId = currentUser.uid;
+            const userRef = collection(db,'Users').doc(userId);
 
-                // Create the HTML elements
-                const anchor = document.createElement("a");
-                const div1 = document.createElement("div");
-                const img = document.createElement("img");
-                const span = document.createElement("span");
-                const div2 = document.createElement("div");
-                const heading = document.createElement("h3");
-                const paragraph = document.createElement("p");
-
-                // Set attributes and classes
-                anchor.setAttribute("href", "#");
-                anchor.classList.add("d-flex", "align-items-center");
-                div1.classList.add("flex-shrink-0");
-                img.classList.add("img-fluid");
-                img.setAttribute("src", "https://mehedihtml.com/chatbox/assets/img/user.png");
-                img.setAttribute("alt", "user img");
-                span.classList.add("active");
-                div2.classList.add("flex-grow-1", "ms-3");
-
-                // Set inner HTML
-                heading.textContent = discussionName;
-
-                // Reference to the "Messages" sub-collection for the current discussion
-                let discussionRef = discussionsRef.doc(doc.id);
-                const messagesRef = discussionRef.collection("Messages");
-
-                // Query to get the last message, ordered by timestamp
-                messagesRef.orderBy("Timestamp", "desc").limit(1).get().then((messageQuerySnapshot) => {
-                    messageQuerySnapshot.forEach((messageDoc) => {
-                        const lastMessage = messageDoc.data().message; // Assuming your message field is named "message"
-
-                        // Populate the paragraph with the last message
-                        paragraph.textContent = "Last Message: " + lastMessage;
-
-                        // Append the child elements to their parent elements
-                        div1.appendChild(img);
-                        div1.appendChild(span);
-                        div2.appendChild(heading);
-                        div2.appendChild(paragraph);
-                        anchor.appendChild(div1);
-                        anchor.appendChild(div2);
-
-                        // Append the main element into the <div class="chat-list">
-                        const chatListDiv = document.querySelector(".chat-list");
-                        chatListDiv.appendChild(anchor);
+            userRef.get().then(doc => {
+                if (doc.exists) {
+                    const discussions = doc.data().Discussions;
+                    const promises = discussions.map(discussionId => {
+                        return collection(db,'Discussions').doc(discussionId).get();
                     });
-                }).catch((error) => {
-                    console.log("Error getting last message:", error);
-                });
+                    Promise.all(promises).then(snapshot => {
+                        const discussionsData = snapshot.map(doc => ({ id: doc.id, data: doc.data() }));
+                        resolve(discussionsData);
+                    }).catch(error => {
+                        reject(error);
+                    });
+                } else {
+                    reject('User document not found');
+                }
+            }).catch(error => {
+                reject(error);
             });
-        }).catch((error) => {
-            console.log("Error getting discussions:", error);
         });
     }
+
+    // Fetch messages of a specific discussion from Firestore
+    function fetchMessages(discussionId) {
+        // Create a reference to the messages collection under the specified group document
+        const messagesRef = collection(db, "Discussions", discussionId, "Messages");
+        // Create a query to order messages by timestamp in ascending order
+        const q = query(messagesRef, orderBy("Timestamp", "asc"));
+
+        return onSnapshot(q, snapshot => {
+            const messages = [];
+            snapshot.forEach(doc => {
+                messages.push(doc.data());
+            });
+            // Call the displayMessages function to display the messages
+            displayMessages(messages);
+        }, error => {
+            console.error('Error fetching messages:', error);
+        });
+    }
+
+    // Display discussions
+    function DisplayDiscussions(discussions, containerId) {
+        const container = document.getElementById(containerId);
+        container.innerHTML = ''; // Clear previous content
+
+        discussions.forEach(discussion => {
+            const discussionDiv = document.createElement('div');
+            discussionDiv.classList.add('chat-list');
+
+            const discussionLink = document.createElement('a');
+            discussionLink.href = '#';
+            discussionLink.classList.add('d-flex', 'align-items-center');
+            discussionLink.addEventListener('click', () => {
+                displayMessages(discussion.id);
+            });
+
+            const userImg = document.createElement('img');
+            userImg.classList.add('img-fluid');
+            userImg.src = 'https://mehedihtml.com/chatbox/assets/img/user.png';
+            userImg.alt = 'user img';
+
+            const discussionDetails = document.createElement('div');
+            discussionDetails.classList.add('flex-grow-1', 'ms-3');
+
+            const discussionName = document.createElement('h3');
+            discussionName.textContent = discussion.data().Name;
+
+            const lastAction = document.createElement('p');
+            lastAction.textContent = 'last action: '; // Add last action here
+
+            discussionDetails.appendChild(discussionName);
+            discussionDetails.appendChild(lastAction);
+
+            discussionLink.appendChild(userImg);
+            discussionLink.appendChild(discussionDetails);
+
+            discussionDiv.appendChild(discussionLink);
+            container.appendChild(discussionDiv);
+        });
+    }
+
+    // Display messages of a discussion
+    function displayMessages(discussionId) {
+        const msgBody = document.querySelector('.msg-body ul');
+        msgBody.innerHTML = ''; // Clear previous messages
+
+        fetchMessages(discussionId).then(messages => {
+            let currentDate = null;
+            messages.forEach(message => {
+                const messageData = message.data;
+                const timestamp = new Date(messageData.Timestamp.toDate());
+                const messageDate = timestamp.toDateString();
+
+                // Display date divider if it's a new date
+                if (messageDate !== currentDate) {
+                    const divider = document.createElement('li');
+                    divider.classList.add('divider');
+                    divider.innerHTML = `<h6>${messageDate}</h6>`;
+                    msgBody.appendChild(divider);
+                    currentDate = messageDate;
+                }
+
+                // Create message element
+                const messageLi = document.createElement('li');
+                messageLi.classList.add(messageData.Auth === 'User_username' ? 'sender' : 'reply');
+                messageLi.innerHTML = `<p>${messageData.Text}</p><span class="time">${timestamp.toLocaleTimeString()}</span>`;
+                msgBody.appendChild(messageLi);
+            });
+        }).catch(error => {
+            console.error('Error fetching messages:', error);
+        });
+    }
+
 
     function DisplayProfileSettings() {
         console.info("DisplayProfileSettings()");
@@ -260,8 +321,26 @@ document.addEventListener('DOMContentLoaded', function () {
             .then((result) => {
                 CreateUserDocument(result.user, userName);
             })
-            .catch((error) => {// An error happened.
+            .catch((error) => {// An error happened // Handle the errors here
+                let errorMessage = "";
+                switch (error.code) {
+                    case 'auth/email-already-in-use':
+                        errorMessage = "This email is already in use.";
+                        break;
+                    case 'auth/invalid-email':
+                        errorMessage = "This email address is not valid.";
+                        break;
+                    case 'auth/operation-not-allowed':
+                        errorMessage = "Operation not allowed. Please contact support.";
+                        break;
+                    case 'auth/weak-password':
+                        errorMessage = "The password is too weak.";
+                        break;
+                    default:
+                        errorMessage = "An unknown error occurred.";
+                }
                 console.error(error);
+                alert(errorMessage); // Or update the UI to show the error message
             })
     }
 
@@ -272,13 +351,33 @@ document.addEventListener('DOMContentLoaded', function () {
         const email = document.getElementById('login-email').value;
         const password = document.getElementById('login-password').value;
 
-        signInWithEmailAndPassword(email, password)
+        console.log(email, password);
+
+        signInWithEmailAndPassword(auth, email, password)
             .then((result) => {
                 console.log("Logged in : " + result.user.displayName)
-                window.location.href = '#home';
+                //window.location.hash = "home";
             })
             .catch((error) => {
+                let errorMessage = "";
+                switch (error.code) {
+                    case 'auth/user-not-found':
+                        errorMessage = "No user found with this email.";
+                        break;
+                    case 'auth/wrong-password':
+                        errorMessage = "Incorrect password.";
+                        break;
+                    case 'auth/invalid-email':
+                        errorMessage = "This email address is not valid.";
+                        break;
+                    case 'auth/invalid-credential':
+                        errorMessage = "Invalid credential.";
+                        break;
+                    default:
+                        errorMessage = "An unknown error occurred.";
+                }
                 console.error(error);
+                alert(errorMessage); // Or update the UI to show the error message
             })
     }
 
@@ -298,7 +397,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     CreateUserDocument(result.user, result.user.displayName);
                 }
                 console.log("Logged in with Google : " + result.user.displayName);
-                window.location = '#home';
+                window.location.hash = "home";
             })
             .catch((error) => {// Handle Errors here.
                 console.error(error);
@@ -307,22 +406,28 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Function to create a document in the "Users" collection
     function CreateUserDocument(user, userName) {
-        // Reference to the "Users" collection
-        const usersCollection = collection("Users");
+        // Ensure the user object has an uid property
+        if (!user || !user.uid) {
+            console.error("Invalid user object:", user);
+            return;
+        }
+
+        const userDocRef = doc(db, "Users", user.uid); // Create a document reference with user's ID
 
         // Create a new document with the user's ID
-        usersCollection.doc(user.id).set({
+        setDoc(userDocRef, {
             Discussions: [],
             ArchivedDiscussions: [],
             Contacts: [],
             BlockedContacts: [],
             CreationTimestamp: Timestamp.now(),
             LastActionTimestamp: Timestamp.now(),
-            ProfilePhotoUrl: user.photoURL || "https://firebasestorage.googleapis.com/v0/b/webchat-tpi.appspot.com/o/ProfilePhotos%2FDefaultProfilePhoto1.jpg?alt=media&token=3eb0960d-24c1-4fd7-9278-8416e1913a23",
+            ProfilePhotoUrl: "https://firebasestorage.googleapis.com/v0/b/webchat-tpi.appspot.com/o/ProfilePhotos%2FDefaultProfilePhoto1.jpg?alt=media&token=3eb0960d-24c1-4fd7-9278-8416e1913a23",
             UserName: userName || GenerateRandomUsername()
         })
             .then(() => {
                 console.log("Document successfully created in Users collection!");
+                AddToDiscussionsAndRemoveFromArchived(user.uid, "VTlG5Gv8X5JLTO8MLjyb")
             })
             .catch((error) => {
                 console.error("Error creating document: ", error);
@@ -332,7 +437,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // Function to update a document in the "Users" collection
     function UpdateUserDocument(userId, fieldsToUpdate) {
         // Reference to the "Users" collection
-        const usersCollection = collection("Users");
+        const usersCollection = collection(db,"Users");
 
         // Create a reference to the user's document
         const userDocRef = doc(usersCollection, userId);
@@ -375,7 +480,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Function to add a contact to the Contacts array and remove it from BlockedContacts
     function AddToContactsAndRemoveFromBlockedContacts(userId, contactId) {
-        const userDocRef = doc(collection("Users"), userId);
+        const userDocRef = doc(collection(db,"Users"), userId);
 
         return runTransaction(db, async (transaction) => {
             const userDoc = await transaction.get(userDocRef);
@@ -407,7 +512,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Function to add a contact to the BlockedContacts array and remove it from Contacts
     function AddToBlockedContactsAndRemoveFromContacts(userId, contactId) {
-        const userDocRef = doc(collection("Users"), userId);
+        const userDocRef = doc(collection(db,"Users"), userId);
 
         return runTransaction(db, async (transaction) => {
             const userDoc = await transaction.get(userDocRef);
@@ -439,7 +544,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Function to add a discussion to the Discussions array and remove it from ArchivedDiscussions
     function AddToDiscussionsAndRemoveFromArchived(userId, discussionId) {
-        const userDocRef = doc(collection("Users"), userId);
+        const userDocRef = doc(collection(db,"Users"), userId);
 
         return runTransaction(db, async (transaction) => {
             const userDoc = await transaction.get(userDocRef);
@@ -471,7 +576,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Function to add a discussion to the ArchivedDiscussions array and remove it from Discussions
     function AddToArchivedAndRemoveFromDiscussions(userId, discussionId) {
-        const userDocRef = doc(collection("Users"), userId);
+        const userDocRef = doc(collection(db,"Users"), userId);
 
         return runTransaction(db, async (transaction) => {
             const userDoc = await transaction.get(userDocRef);
@@ -516,5 +621,4 @@ document.addEventListener('DOMContentLoaded', function () {
         // After logout actions are complete, change the hash to #loginOrRegister
         window.location.hash = "#loginOrRegister";
     }
-
 });

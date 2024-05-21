@@ -1,3 +1,6 @@
+// Import the logged and loggedChangeEvent from your model
+import { logged, loggedChangeEvent } from '../Model/app.js';
+
 document.addEventListener('DOMContentLoaded', function () {
     const pageTitle = "WebChat";
     const contentContainer = document.getElementById('content');
@@ -27,23 +30,14 @@ document.addEventListener('DOMContentLoaded', function () {
     const loadContent = async (hash) => {
         const route = routes[hash] || routes["lost"];
         try {
-            // get the html from the template
-            // set the content of the content div to the html
             contentContainer.innerHTML = await fetch(route.page).then((response) => response.text());
-            // set the title of the document to the title of the route
             document.title = route.title;
-            // set the description of the document to the description of the route
-            document
-                .querySelector('meta[name="description"]')
-                .setAttribute("content", route.description);
+            document.querySelector('meta[name="description"]').setAttribute("content", route.description);
         } catch (error) {
             console.error("Error loading content:", error);
             contentContainer.innerHTML = "<h1>Error loading page</h1>";
             document.title = "Error";
-            // set the description of the document to the description of the route
-            document
-                .querySelector('meta[name="description"]')
-                .setAttribute("content", "Error loading page");
+            document.querySelector('meta[name="description"]').setAttribute("content", "Error loading page");
         }
     };
 
@@ -51,13 +45,28 @@ document.addEventListener('DOMContentLoaded', function () {
      * Function to handle hash change
      */
     const handleHashChange = () => {
-        let hash = localStorage.getItem('logged') === "true" ? "home" : "loginOrRegister";
-        loadContent(hash).then(r=>loadContent(hash));
+        let hash = logged ? "home" : "loginOrRegister";
+        loadContent(hash).catch(error => {
+            console.error("Error loading content:", error);
+            loadContent("lost");
+        });
     };
 
-    // Listen for hash changes
-    window.addEventListener("hashchange", handleHashChange);
+    // Add an event listener to listen for the 'loggedChange' event
+    window.addEventListener('loggedChange', (event) => {
+        handleHashChange();
+        console.log('Login status changed');
+    });
 
-    // Call handleHashChange initially to load the appropriate content
-    handleHashChange();
+    // Function to wait for the login status to be determined
+    const waitForLoginStatus = () => {
+        if (typeof logged !== 'undefined') {
+            handleHashChange();
+        } else {
+            setTimeout(waitForLoginStatus, 100); // Check again after 100ms
+        }
+    };
+
+    // Call waitForLoginStatus initially to load the appropriate content
+    waitForLoginStatus();
 });

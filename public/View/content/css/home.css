@@ -273,7 +273,10 @@ message-area
 }
 
 a.add img {
+    background: transparent;
+    position: absolute;
     height: 36px;
+    bottom: 1px;
 }
 
 .chat-area .nav-tabs {
@@ -412,8 +415,8 @@ a.add img {
 
 .msg-body ul li.sender {
     display: block;
-    width: 100%;
     position: relative;
+    margin: 5%;
 }
 
 .msg-body ul li.sender:before {
@@ -457,9 +460,9 @@ a.add img {
 
 .msg-body ul li.repaly {
     display: block;
-    width: 100%;
     text-align: right;
     position: relative;
+    margin: 5%;
 }
 
 .msg-body ul li.repaly:before {
