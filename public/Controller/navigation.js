@@ -1,5 +1,11 @@
+/*
+* Name : navigation.js
+* Author : JSO
+* Modified : 23.05.2024
+* */
+
 // Import the logged and loggedChangeEvent from your model
-import { logged, loggedChangeEvent } from '../Model/app.js';
+import { logged } from '../Model/auth.js';
 
 document.addEventListener('DOMContentLoaded', function () {
     const pageTitle = "WebChat";
@@ -29,16 +35,9 @@ document.addEventListener('DOMContentLoaded', function () {
      */
     const loadContent = async (hash) => {
         const route = routes[hash] || routes["lost"];
-        try {
-            contentContainer.innerHTML = await fetch(route.page).then((response) => response.text());
-            document.title = route.title;
-            document.querySelector('meta[name="description"]').setAttribute("content", route.description);
-        } catch (error) {
-            console.error("Error loading content:", error);
-            contentContainer.innerHTML = "<h1>Error loading page</h1>";
-            document.title = "Error";
-            document.querySelector('meta[name="description"]').setAttribute("content", "Error loading page");
-        }
+        contentContainer.innerHTML = await fetch(route.page).then((response) => response.text());
+        document.title = route.title;
+        document.querySelector('meta[name="description"]').setAttribute("content", route.description);
     };
 
     /**
@@ -48,7 +47,12 @@ document.addEventListener('DOMContentLoaded', function () {
         let hash = logged ? "home" : "loginOrRegister";
         loadContent(hash).catch(error => {
             console.error("Error loading content:", error);
-            loadContent("lost");
+            loadContent("lost").catch(error => {
+                console.error("Error loading content:", error);
+                contentContainer.innerHTML = "<h1>Error loading page</h1>";
+                document.title = "Error";
+                document.querySelector('meta[name="description"]').setAttribute("content", "Error loading page");
+            })
         });
     };
 

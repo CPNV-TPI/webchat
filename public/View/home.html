@@ -6,7 +6,7 @@
         <div id="navbarNav">
             <ul class="navbar-nav ms-auto">
                 <li class="nav-item">
-                    <a class="nav-link" href="?page=discussions">Discussions</a>
+                    <a class="nav-link" href="?page=discussionsOpen">Discussions</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="?page=profile">Profile</a>
@@ -40,9 +40,9 @@
                                             </button>
                                         </li>
                                         <li class="nav-item" role="presentation">
-                                            <button class="nav-link" id="Closed-tab" data-bs-toggle="tab"
-                                                    data-bs-target="#Closed" type="button" role="tab"
-                                                    aria-controls="Closed" aria-selected="false">Archive
+                                            <button class="nav-link" id="Archived-tab" data-bs-toggle="tab"
+                                                    data-bs-target="#Archived" type="button" role="tab"
+                                                    aria-controls="Archived" aria-selected="false">Archive
                                             </button>
                                         </li>
                                     </ul>
@@ -93,19 +93,14 @@
                                     </div>
                                     <!-- chat-list -->
                                 </div>
-                                <ul class="add">
-                                    <li class="navbar nav-item dropdown">
-                                        <a class="nav-link dropdown-toggle add" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                            <img class="img-fluid" src="https://mehedihtml.com/chatbox/assets/img/add.svg" alt="add">
-                                            <i class="fa fa-ellipsis-v" aria-hidden="true"></i>
-                                        </a>
-                                        <ul class="dropdown-menu">
-                                            <li><a class="dropdown-item" href="?action=seeContactProfile">Discussion</a></li>
-                                            <li><hr class="dropdown-divider"/></li>
-                                            <li><a class="dropdown-item" href="?action=blockContact">Contact</a></li>
-                                        </ul>
-                                    </li>
-                                </ul>
+                                <div class="dropdown dropright add">
+                                    <img class="btn-primary dropdown-toggle img-fluid add" src="https://mehedihtml.com/chatbox/assets/img/add.svg" alt="add" data-toggle="dropdown">
+                                    <div class="dropdown-menu">
+                                        <a class="dropdown-item" onclick="document.getElementById('addContact').style.display='block'" style="width:auto;">New Contact</a>
+                                        <hr class="dropdown-divider"/>
+                                        <a class="dropdown-item" onclick="document.getElementById('addDiscussion').style.display='block'" style="width:auto;">New Discussion</a>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -229,3 +224,48 @@
         </div>
     </div>
 </section>
+<div id="addContact" class="modal">
+    <form class="modal-content animate" id="addContact_form">
+        <div class="container">
+            <label for="contact_username"><b>Contact Username</b></label>
+            <input type="text" placeholder="Enter Contact Username" name="contact_username" id="contact_username" required>
+            <button name="addContact_btn" type="button" id="addContact_btn">Add</button>
+        </div>
+        <div class="container" style="background-color:#f1f1f1">
+            <button type="button" onclick="document.getElementById('addContact').style.display='none'" class="cancel_btn">
+                Cancel
+            </button>
+        </div>
+    </form>
+</div>
+<div id="addDiscussion" class="modal">
+    <form class="modal-content animate" id="addDiscussion_form">
+        <div class="container">
+            <label for="login-email"><b>Email</b></label>
+            <input type="text" placeholder="Enter Email" name="login-email" id="login-email" required>
+            <button name="login_btn" type="button" id="login_btn">Login</button>
+        </div>
+        <div class="container" style="background-color:#f1f1f1">
+            <button type="button" onclick="document.getElementById('addDiscussion').style.display='none'" class="cancel_btn">
+                Cancel
+            </button>
+        </div>
+    </form>
+</div>
+<script>
+    // Get the modal and form elements
+    const addContactModal = document.getElementById('addContact');
+    const addContactForm = document.getElementById('addContact_form');
+    const addDiscussionModal = document.getElementById('addDiscussion');
+    const addDiscussionForm = document.getElementById('addDiscussion_form');
+
+    // When the user clicks anywhere outside the form, close the modal
+    window.onclick = function (event) {
+        if (event.target === addContactModal && !addContactForm.contains(event.target)) {
+            addContactModal.style.display = "none";
+        }
+        if (event.target === addDiscussionModal && !addDiscussionForm.contains(event.target)) {
+            addDiscussionModal.style.display = "none";
+        }
+    }
+</script>
