@@ -65,16 +65,28 @@ How to deploy the application outside the dev environment.
 * Tip: try the tree bash command
 
 ```shell
-├───Shopping                                        //classes and packages
-│   ├───bin                                         //the binary to deploy on the end-user environment
-        
-├───.idea                                           //les informations sur le projet webstorm
-├───docs                                            //la documentation
-├───jest-test                                       //les classes de test
-└───public                                          //le dossier qui est publier dans firebase
-    └───View                                        //les différentes pages
-        └───content
-            └───logos                               //les fichiers des logos
+├───docs                                            // la documentation
+├───public                                          // le dossier qui est publier dans firebase
+|   ├───Controller                                  // 
+|   |   └───navigation.js                           // gère la lagique de navigation entre les pages
+|   ├───Model                                       //
+|   |   ├───app.js                                  //
+|   |   ├───auth.js                                 //
+|   |   ├───firestore.js                            //
+|   |   ├───initializeFirebase.js                   //
+|   |   └───storage.js                              // 
+|   ├───View                                        // Tous se qui est visuel
+|   |   ├───content                                 // tous les fichiers .css
+|   |   |   ├───css                                 // tous les logos
+|   |   |   └───logos                               // les fichiers des logos
+|   |   ├───home.html                               // 
+|   |   └───loginOrRegister.html                    // 
+|   ├───404.html                                    // ma page en cas d'erreur
+|   └───index.html                                  // ma page d'index
+├───.firebaserc                                     //
+├───.gitignore                                      // liste de tous les fichiers à ignorer pendant un push github
+├───README.md                                       // le fichier explication de base du projet
+└───firebase.json                                   //
 ```
 
 ## Collaborate
@@ -95,4 +107,3 @@ How to deploy the application outside the dev environment.
 Surico Joshua
 [Issues Github](https://github.com/CPNV-TPI/webchat/issues)
 ph73tll@eduvaud.ch
-076 504 05 18
