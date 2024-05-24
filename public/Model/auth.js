@@ -3,39 +3,11 @@
 * Author : JSO
 * Modified : 23.05.2024
 * */
-
-import { createUserWithEmailAndPassword, getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithEmailAndPassword, signInWithPopup, signOut } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 import { app } from "./initializeFirebase.js";
+import { createUserWithEmailAndPassword, getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithEmailAndPassword, signInWithPopup, signOut } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 import { CreateUserProfileDocument } from "./firestore.js"
 
 const auth = getAuth(app);
-
-let logged;
-let currentUser;
-
-// Define the custom event
-const loggedChangeEvent = new Event('loggedChange');
-
-// Dispatch the event whenever the value of logged changes
-// For example, if you have a function that updates the login status, you can dispatch the event after the update
-function updateLoginStatus(newStatus) {
-    logged = newStatus;
-    // Dispatch the custom event
-    window.dispatchEvent(loggedChangeEvent);
-}
-
-// Check Auth state and change "logged" value
-onAuthStateChanged(auth, function (user) {
-    if (user) {
-        currentUser = user;
-        updateLoginStatus(true);
-        console.log("user logged in");
-    } else {
-        currentUser = "";
-        updateLoginStatus(false);
-        console.log("user logged out");
-    }
-});
 
 /**
  * Function to register
@@ -140,4 +112,4 @@ function Logout() {
 }
 
 
-export { logged, currentUser, Register, Login, GoogleLogin, Logout };
+export { auth, onAuthStateChanged, Register, Login, GoogleLogin, Logout };

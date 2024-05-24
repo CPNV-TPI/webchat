@@ -5,7 +5,7 @@
 * */
 
 // Import the logged and loggedChangeEvent from your model
-import { logged } from '../Model/auth.js';
+import { logged } from '../Model/app.js';
 
 document.addEventListener('DOMContentLoaded', function () {
     const pageTitle = "WebChat";

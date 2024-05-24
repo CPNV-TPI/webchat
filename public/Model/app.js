@@ -5,11 +5,40 @@
 * */
 
 // import functions and variables
-import {logged, GoogleLogin, Login, Logout, Register, currentUser} from "./auth.js";
-import { FetchDiscussions, FetchMessages, RemoveFromArray, AddToArray} from "./firestore.js";
+import { auth, onAuthStateChanged, GoogleLogin, Login, Logout, Register} from "./auth.js";
+import {FetchDiscussions, FetchMessages, RemoveFromArray, AddToArray, FetchUsernames} from "./firestore.js";
 
 let currentDiscussionID;
 let currentDiscussionListener; // Store reference to the current Discussion listener
+let logged;
+let currentUser;
+
+let selectedUserIds = []; // Array to store selected users with their IDs and usernames
+let selectedUsernames = [];
+
+// Define the custom event
+const loggedChangeEvent = new Event('loggedChange');
+
+// Dispatch the event whenever the value of logged changes
+// For example, if you have a function that updates the login status, you can dispatch the event after the update
+function updateLoginStatus(newStatus) {
+    logged = newStatus;
+    // Dispatch the custom event
+    window.dispatchEvent(loggedChangeEvent);
+}
+
+// Check Auth state and change "logged" value
+onAuthStateChanged(auth, function (user) {
+    if (user) {
+        currentUser = user;
+        updateLoginStatus(true);
+        console.log("user logged in");
+    } else {
+        currentUser = "";
+        updateLoginStatus(false);
+        console.log("user logged out");
+    }
+});
 
 document.addEventListener('DOMContentLoaded', function () {
 
@@ -24,7 +53,6 @@ document.addEventListener('DOMContentLoaded', function () {
         // Get the value of the 'page' and 'action' query parameters from the URL
         const urlParams = new URLSearchParams(window.location.search);
         let page = urlParams.get('page');
-        const action = urlParams.get('action');
 
         // If 'page' is not present, redirect to '?page=discussionsOpen'
         if (!page) {
@@ -46,58 +74,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 break;
             default:
                 console.log("Page parameter is not recognized or not provided.");
-                break;
-        }
-
-        // Check the value of the 'action' parameter and take appropriate action
-        switch (action) {
-            case "addContact":
-                // AddContact function should be defined elsewhere
-                AddContact()
-                    .catch(error => {
-                        console.error("Error adding contact:", error);
-                        // Handle error appropriately, e.g., show an error message to the user
-                    });
-                break;
-            //case "blockContact":
-            //    // BlockContact function should be defined elsewhere
-            //    BlockContact()
-            //        .catch(error => {
-            //            console.error("Error blocking contact:", error);
-            //            // Handle error appropriately, e.g., show an error message to the user
-            //        });
-            //    break;
-            //case 'seeContactProfile':
-            //    // SeeContactProfile function should be defined elsewhere
-            //    SeeContactProfile()
-            //        .catch(error => {
-            //            console.error("Error seeing contact profile:", error);
-            //            // Handle error appropriately, e.g., show an error message to the user
-            //        });
-            //    break;
-            case "createDiscussion":
-                // CreateDiscussions function should be defined elsewhere
-                CreateDiscussions()
-                    .catch(error => {
-                        console.error("Error creating discussion:", error);
-                        // Handle error appropriately, e.g., show an error message to the user
-                    });
-                break;
-            //case "archiveDiscussion":
-            //    // ArchiveDiscussions function should be defined elsewhere
-            //    ArchiveDiscussions()
-            //        .catch(error => {
-            //            console.error("Error archiving discussion:", error);
-            //            // Handle error appropriately, e.g., show an error message to the user
-            //        });
-            //    break;
-            default:
-                // If action is not in the list of valid actions, remove it from the URL
-                if (action) {
-                    const newUrl = new URL(window.location.href);
-                    newUrl.searchParams.delete('action');
-                    window.history.replaceState(null, '', newUrl.toString());
-                }
                 break;
         }
     }
@@ -138,12 +114,40 @@ document.addEventListener('DOMContentLoaded', function () {
                     //SendMessage();
                     break;
                 case 'add_contact_btn':
-                    break;
-                case 'remove_contact_btn':
+                    if (selectedUserIds.length > 0) {
+                        AddContact(selectedUserIds);
+                    }
                     break;
                 case 'block_contact_btn':
+
                     break;
                 case 'create_discussion_btn':
+                    CreateDiscussions()
+                        .catch(error => {
+                            console.error("Error creating discussion:", error);
+                            // Handle error appropriately, e.g., show an error message to the user
+                        });
+                    break;
+                default:
+                    break;
+            }
+        }
+    });
+
+    document.addEventListener('input', async function (event) {
+        // Check if the element has an id
+        if (event.target && event.target.id) {
+            const targetId = event.target.id;
+            switch (targetId) {
+                case 'inlineFormInputGroup':
+                    break;
+                case 'contact_username':
+                    const input = event.target.value;
+                    if (input.length < 3) {
+                        DisplayMatchingUsernames([], "Please enter at least 3 characters.");
+                        return;
+                    }
+                    DisplayMatchingUsernames(await FetchUsernames(input));
                     break;
                 default:
                     break;
@@ -163,6 +167,9 @@ document.addEventListener('DOMContentLoaded', function () {
         // Perform validation
         if (!nameField.value.trim() || !emailField.value.trim() || !passwordField.value.trim()) {
             alert('Please fill in all fields.');
+            return false; // Return false to indicate validation failure
+        }else if (nameField.value.length < 4) {
+            alert('The username field is too short. (min 4 characters)');
             return false; // Return false to indicate validation failure
         }
 
@@ -192,8 +199,107 @@ document.addEventListener('DOMContentLoaded', function () {
 
     }
 
-    function AddContact(){
+    function DisplayMatchingUsernames(users, message) {
+        const matchingUsernamesDiv = document.getElementById('matching_usernames');
+        matchingUsernamesDiv.innerHTML = ''; // Clear previous results
 
+        if (!message && users.length === 0){
+            message = "No matching users found."
+        }
+        if (message) {
+            const messageDiv = document.createElement('div');
+            messageDiv.textContent = message;
+            matchingUsernamesDiv.appendChild(messageDiv);
+        }
+
+        const form = document.createElement('form');
+        form.id = 'matching_usernames_form';
+
+        // Display matching users
+        users.forEach(user => {
+            const checkboxLabel = document.createElement('label');
+            checkboxLabel.classList.add('username-checkbox-label');
+
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.name = 'usernames';
+            checkbox.value = user.id;
+            checkbox.checked = selectedUserIds.includes(user.id);
+            checkbox.addEventListener('change', handleCheckboxChange);
+            checkboxLabel.appendChild(checkbox);
+
+            const span = document.createElement('span');
+            span.textContent = user.userName;
+            checkboxLabel.appendChild(span);
+
+            form.appendChild(checkboxLabel);
+            form.appendChild(document.createElement('br'));
+        });
+
+        matchingUsernamesDiv.appendChild(form);
+
+        if (selectedUserIds.length > 0) {
+            const separator = document.createElement('hr');
+            matchingUsernamesDiv.appendChild(separator);
+
+            const selectedUsersForm = document.createElement('form');
+            selectedUsersForm.id = 'selected_usernames_form';
+
+            // Display already selected users
+            selectedUserIds.forEach((userId, index) => {
+                const checkboxLabel = document.createElement('label');
+                checkboxLabel.classList.add('username-checkbox-label');
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.name = 'usernames';
+                checkbox.value = userId;
+                checkbox.checked = true;
+                checkbox.addEventListener('change', handleCheckboxChange);
+                checkboxLabel.appendChild(checkbox);
+
+                const span = document.createElement('span');
+                span.textContent = selectedUsernames[index];
+                checkboxLabel.appendChild(span);
+
+                selectedUsersForm.appendChild(checkboxLabel);
+                selectedUsersForm.appendChild(document.createElement('br'));
+            });
+
+            matchingUsernamesDiv.appendChild(selectedUsersForm);
+        }
+    }
+
+    function handleCheckboxChange(event) {
+        const checkbox = event.target;
+        const userName = checkbox.nextSibling.textContent;
+
+        if (checkbox.checked) {
+            selectedUserIds.push(checkbox.value);
+            selectedUsernames.push(userName);
+        } else {
+            const index = selectedUserIds.indexOf(checkbox.value);
+            if (index > -1) {
+                selectedUserIds.splice(index, 1);
+                selectedUsernames.splice(index, 1);
+            }
+        }
+
+        // Re-render to reflect changes
+        const input = document.getElementById('contact_username').value;
+        if (input.length >= 3) {
+            FetchUsernames(input).then(users => {
+                DisplayMatchingUsernames(users, users.length === 0 ? "No matching users found." : "");
+            });
+        } else {
+            DisplayMatchingUsernames([], "Please enter at least 3 characters.");
+        }
+    }
+
+    function AddContact(selectedUserIds){
+        selectedUserIds.forEach((id) => {
+            AddToArray(currentUser.uid, "Contacts", id);
+        })
     }
 
     function DisplayProfileSettings() {
@@ -202,7 +308,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Display discussions
     async function DisplayDiscussions(containerId) {
-        const discussions = await FetchDiscussions();
+        const discussions = await FetchDiscussions(currentUser);
 
         const container = document.getElementById(containerId);
         container.innerHTML = ''; // Clear previous content
@@ -274,3 +380,5 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 });
+
+export { currentUser, logged };

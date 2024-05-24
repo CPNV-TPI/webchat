@@ -229,7 +229,8 @@
         <div class="container">
             <label for="contact_username"><b>Contact Username</b></label>
             <input type="text" placeholder="Enter Contact Username" name="contact_username" id="contact_username" required>
-            <button name="addContact_btn" type="button" id="addContact_btn">Add</button>
+            <div id="matching_usernames"></div> <!-- This div will display the matching usernames -->
+            <button name="add_contact_btn" type="button" id="add_contact_btn">Add</button>
         </div>
         <div class="container" style="background-color:#f1f1f1">
             <button type="button" onclick="document.getElementById('addContact').style.display='none'" class="cancel_btn">
