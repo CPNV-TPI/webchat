@@ -5,16 +5,22 @@
 * */
 
 // import functions and variables
-import { auth, onAuthStateChanged, GoogleLogin, Login, Logout, Register} from "./auth.js";
-import {FetchDiscussions, FetchMessages, RemoveFromArray, AddToArray, FetchUsernames} from "./firestore.js";
+import {auth, onAuthStateChanged, GoogleLogin, Login, Logout, Register} from "./auth.js";
+import {
+    FetchDiscussions,
+    FetchMessages,
+    FetchAllUsernamesAndIds,
+    AddToArray,
+    RemoveFromArray,
+    ReadFromArray
+} from "./firestore.js";
 
 let currentDiscussionID;
 let currentDiscussionListener; // Store reference to the current Discussion listener
 let logged;
 let currentUser;
 
-let selectedUserIds = []; // Array to store selected users with their IDs and usernames
-let selectedUsernames = [];
+let selectedUsers = []; // Array to store selected users as objects with id and userName
 
 // Define the custom event
 const loggedChangeEvent = new Event('loggedChange');
@@ -46,7 +52,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!logged) {
             console.log("User is not logged in.");
             return; // Exit the function if the user is not logged in
-        }else{
+        } else {
             console.log("User is logged in.");
         }
 
@@ -114,8 +120,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     //SendMessage();
                     break;
                 case 'add_contact_btn':
-                    if (selectedUserIds.length > 0) {
-                        AddContact(selectedUserIds);
+                    if (selectedUsers.length > 0) {
+                        AddContact(selectedUsers);
                     }
                     break;
                 case 'block_contact_btn':
@@ -138,16 +144,14 @@ document.addEventListener('DOMContentLoaded', function () {
         // Check if the element has an id
         if (event.target && event.target.id) {
             const targetId = event.target.id;
+            const inputValue = event.target.value;
             switch (targetId) {
                 case 'inlineFormInputGroup':
                     break;
                 case 'contact_username':
-                    const input = event.target.value;
-                    if (input.length < 3) {
-                        DisplayMatchingUsernames([], "Please enter at least 3 characters.");
-                        return;
-                    }
-                    DisplayMatchingUsernames(await FetchUsernames(input));
+                    await DisplayMatchingUsernames(inputValue);
+                    break;
+                case 'contact_username_to_add':
                     break;
                 default:
                     break;
@@ -168,7 +172,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!nameField.value.trim() || !emailField.value.trim() || !passwordField.value.trim()) {
             alert('Please fill in all fields.');
             return false; // Return false to indicate validation failure
-        }else if (nameField.value.length < 4) {
+        } else if (nameField.value.length < 4) {
             alert('The username field is too short. (min 4 characters)');
             return false; // Return false to indicate validation failure
         }
@@ -195,111 +199,127 @@ document.addEventListener('DOMContentLoaded', function () {
         return true; // Return true to indicate validation success
     }
 
-    function CreateDiscussions(){
+    function CreateDiscussions() {
 
     }
 
-    function DisplayMatchingUsernames(users, message) {
+    async function DisplayMatchingUsernames(input) {
+        const allUsers = await FetchAllUsernamesAndIds()
+        let message;
+        const filteredUsers = allUsers.filter(user => user.userName.toLowerCase().includes(input.toLowerCase())); // Filter users based on the input
+
+        if (input.length < 3) {
+            message = "Please enter at least 3 characters.";
+        }
+        if (!message && filteredUsers.length === 0) {
+            message = "No matching contacts found.";
+        }
+
         const matchingUsernamesDiv = document.getElementById('matching_usernames');
         matchingUsernamesDiv.innerHTML = ''; // Clear previous results
+        const form = document.createElement('form');
+        form.id = 'matching_usernames_form';
 
-        if (!message && users.length === 0){
-            message = "No matching users found."
-        }
         if (message) {
             const messageDiv = document.createElement('div');
             messageDiv.textContent = message;
             matchingUsernamesDiv.appendChild(messageDiv);
+        }else{
+            // Display matching users
+            filteredUsers.forEach(user => {
+                const checkbox = CreateCheckbox(selectedUsers.some(selectedUser => selectedUser.uid === user.uid), user);
+                form.appendChild(checkbox);
+                form.appendChild(document.createElement('br'));
+            });
         }
 
-        const form = document.createElement('form');
-        form.id = 'matching_usernames_form';
-
-        // Display matching users
-        users.forEach(user => {
-            const checkboxLabel = document.createElement('label');
-            checkboxLabel.classList.add('username-checkbox-label');
-
-            const checkbox = document.createElement('input');
-            checkbox.type = 'checkbox';
-            checkbox.name = 'usernames';
-            checkbox.value = user.id;
-            checkbox.checked = selectedUserIds.includes(user.id);
-            checkbox.addEventListener('change', handleCheckboxChange);
-            checkboxLabel.appendChild(checkbox);
-
-            const span = document.createElement('span');
-            span.textContent = user.userName;
-            checkboxLabel.appendChild(span);
-
-            form.appendChild(checkboxLabel);
-            form.appendChild(document.createElement('br'));
-        });
-
-        matchingUsernamesDiv.appendChild(form);
-
-        if (selectedUserIds.length > 0) {
-            const separator = document.createElement('hr');
-            matchingUsernamesDiv.appendChild(separator);
-
-            const selectedUsersForm = document.createElement('form');
-            selectedUsersForm.id = 'selected_usernames_form';
+        if (selectedUsers.length > 0) {
+            form.appendChild(document.createElement('hr')) // add a separator
 
             // Display already selected users
-            selectedUserIds.forEach((userId, index) => {
-                const checkboxLabel = document.createElement('label');
-                checkboxLabel.classList.add('username-checkbox-label');
-
-                const checkbox = document.createElement('input');
-                checkbox.type = 'checkbox';
-                checkbox.name = 'usernames';
-                checkbox.value = userId;
-                checkbox.checked = true;
-                checkbox.addEventListener('change', handleCheckboxChange);
-                checkboxLabel.appendChild(checkbox);
-
-                const span = document.createElement('span');
-                span.textContent = selectedUsernames[index];
-                checkboxLabel.appendChild(span);
-
-                selectedUsersForm.appendChild(checkboxLabel);
-                selectedUsersForm.appendChild(document.createElement('br'));
+            selectedUsers.forEach(user => {
+                const checkbox = CreateCheckbox(true, user);
+                form.appendChild(checkbox);
+                form.appendChild(document.createElement('br'));
             });
-
-            matchingUsernamesDiv.appendChild(selectedUsersForm);
         }
+
+        matchingUsernamesDiv.appendChild(form);
     }
 
-    function handleCheckboxChange(event) {
+    function CreateCheckbox(checked, user) {
+        const checkboxLabel = document.createElement('label');
+        checkboxLabel.classList.add('username-checkbox-label');
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.name = 'usernames';
+        checkbox.value = user.uid;
+        checkbox.dataset.username = user.userName; // Store the username in a data attribute
+
+        checkbox.checked = checked;
+
+        checkbox.addEventListener('change', handleCheckboxChange);
+        checkboxLabel.appendChild(checkbox);
+
+        const span = document.createElement('span');
+        span.textContent = user.userName;
+        checkboxLabel.appendChild(span);
+
+        return checkboxLabel;
+    }
+
+    // Function to handle checkbox changes
+    async function handleCheckboxChange(event) {
         const checkbox = event.target;
-        const userName = checkbox.nextSibling.textContent;
+        const userId = checkbox.value;
+        const userName = checkbox.dataset.username;
 
         if (checkbox.checked) {
-            selectedUserIds.push(checkbox.value);
-            selectedUsernames.push(userName);
+            selectedUsers.push({id: userId, userName: userName});
         } else {
-            const index = selectedUserIds.indexOf(checkbox.value);
-            if (index > -1) {
-                selectedUserIds.splice(index, 1);
-                selectedUsernames.splice(index, 1);
-            }
+            selectedUsers = selectedUsers.filter(user => user.uid !== userId);
         }
-
         // Re-render to reflect changes
         const input = document.getElementById('contact_username').value;
         if (input.length >= 3) {
-            FetchUsernames(input).then(users => {
+            const allUsers = await FetchAllUsernamesAndIds();
+            await DisplayMatchingUsernames(allUsers, input);
+
+            FetchAllUsernamesAndIds(input).then(users => {
                 DisplayMatchingUsernames(users, users.length === 0 ? "No matching users found." : "");
             });
         } else {
-            DisplayMatchingUsernames([], "Please enter at least 3 characters.");
+            await DisplayMatchingUsernames([], "Please enter at least 3 characters.");
         }
     }
 
-    function AddContact(selectedUserIds){
-        selectedUserIds.forEach((id) => {
-            AddToArray(currentUser.uid, "Contacts", id);
+    function AddContact(users) {
+        users.forEach(user => {
+            AddToArray(currentUser.uid, "Contacts", user.uid + "," + user.userName)
+                .then(() => {
+                    console.log("Contacts added successfully!");
+                    ClearSelectedUsers();
+                })
+                .catch(error => {
+                    console.error("Error adding contacts: ", error);
+                });
         })
+
+        ClearSelectedUsers();
+    }
+
+    function ClearSelectedUsers() {
+        // Clear the selectedUserIds array
+        selectedUsers = [];
+
+        // Get all checkboxes and uncheck them
+        const checkboxes = document.querySelectorAll('input[name="usernames"]:checked');
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = false;
+        });
+
+        console.log("Selected user IDs have been cleared.");
     }
 
     function DisplayProfileSettings() {
@@ -348,7 +368,6 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-
     // Display messages of a discussion
     async function DisplayMessages(discussionId) {
         const msgBody = document.querySelector('.msg-body ul');
@@ -359,7 +378,11 @@ document.addEventListener('DOMContentLoaded', function () {
         let LastMessageDay = null;
         messages.forEach(message => {
             const messageData = message.data;
-            const messageDate = new Date(messageData.Timestamp);
+
+            const messageDate = new Date(messageData.Timestamp * 1000).toLocaleString();
+
+            console.log(messageDate);
+
             const messageDay = messageDate.getDay();
 
             // Display date divider if it's a new date
@@ -373,12 +396,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
             // Create message element
             const messageLi = document.createElement('li');
-            
-            messageLi.classList.add(messageData.Auth === currentUser ? 'sender' : 'reply');
+
+            messageLi.classList.add(messageData.Auth === currentUser ? 'sender' : 'other');
             messageLi.innerHTML = `<p>${messageData.Text}</p><span class="time">${messageDate.toLocaleTimeString()}</span>`;
             msgBody.appendChild(messageLi);
         });
     }
 });
 
-export { currentUser, logged };
+export {currentUser, logged};

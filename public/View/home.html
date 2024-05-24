@@ -150,7 +150,7 @@
                                                 <p> Hey, Are you there? </p>
                                                 <span class="time">10:16 am</span>
                                             </li>
-                                            <li class="repaly">
+                                            <li class="other">
                                                 <p>good!</p>
                                                 <span class="time">10:20 am</span>
                                             </li>
@@ -159,7 +159,7 @@
                                                     <h6>Today</h6>
                                                 </div>
                                             </li>
-                                            <li class="repaly">
+                                            <li class="other">
                                                 <p> yes, tell me</p>
                                                 <span class="time">10:36 am</span>
                                             </li>
@@ -242,8 +242,11 @@
 <div id="addDiscussion" class="modal">
     <form class="modal-content animate" id="addDiscussion_form">
         <div class="container">
-            <label for="login-email"><b>Email</b></label>
-            <input type="text" placeholder="Enter Email" name="login-email" id="login-email" required>
+            <label for="discussion_name"><b>Discussion name</b></label>
+            <input type="text" placeholder="Enter discussion name" name="discussion_name" id="discussion_name" required>
+            <label for="contact_username_to_add">Members</label>
+            <input type="text" placeholder="Enter the username of the contact you wan to add as Member of the discussion" name="contact_username" id="contact_username_to_add" required>
+            <div id="matching_contacts"></div> <!-- This div will display matching contacts -->
             <button name="login_btn" type="button" id="login_btn">Login</button>
         </div>
         <div class="container" style="background-color:#f1f1f1">

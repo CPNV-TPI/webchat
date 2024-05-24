@@ -3,11 +3,12 @@
 * Author : JSO
 * Modified : 23.05.2024
 * */
-import { app } from "./initializeFirebase.js";
+import {app} from "./initializeFirebase.js";
 import {
     collection,
     doc,
     getDoc,
+    getDocs,
     getFirestore,
     orderBy,
     query,
@@ -15,9 +16,7 @@ import {
     setDoc,
     Timestamp,
     updateDoc,
-    collectionGroup,
-    where,
-    getDocs
+    where
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 const db = getFirestore(app);// Initialize Cloud Firestore and get a reference to the service
@@ -146,20 +145,17 @@ function GenerateRandomUsername() {
     return `${randomNoun} the ${randomAdjective}`;
 }
 
-async function FetchUsernames(input) {
+async function FetchAllUsernamesAndIds() {
     try {
         const usersRef = collection(db, "Users");
-        const q = query(usersRef, where("UserName", ">=", input), where("UserName", "<=", input + "\uf8ff"));
-        const querySnapshot = await getDocs(q);
-        let matches = [];
+        const querySnapshot = await getDocs(usersRef);
+        let allUsers = [];
         querySnapshot.forEach((doc) => {
-            if (matches.length < 3) {
-                matches.push({id: doc.id, userName: doc.data().UserName});
-            }
+            allUsers.push({ uid: doc.id, userName: doc.data().UserName });
         });
-        return matches;
+        return allUsers;
     } catch (error) {
-        console.error("Error fetching matching usernames: ", error);
+        console.error("Error fetching all usernames: ", error);
     }
 }
 
@@ -219,6 +215,26 @@ function RemoveFromArray(userId, arrayName, itemId) {
         });
 }
 
+async function ReadFromArray(userId, arrayName) {
+    const userDocRef = doc(collection(db, "Users"), userId);
+
+    try {
+        const userDoc = await getDoc(userDocRef);
+
+        if (userDoc.exists()) {
+            const array = userDoc.data()[arrayName] || [];
+            console.log(`${arrayName}:`, array);
+            return array;
+        } else {
+            console.log("No such document!");
+            return [];
+        }
+    } catch (error) {
+        console.error(`Error reading ${arrayName} from user document: `, error);
+        return [];
+    }
+}
+
 /*
 Usage Examples
 
@@ -247,4 +263,4 @@ Removing from ArchivedDiscussions
 removeFromArray(userId, "ArchivedDiscussions", discussionId);
  */
 
-export { AddToArray, RemoveFromArray, FetchDiscussions, FetchMessages, CreateUserProfileDocument, FetchUsernames}
+export { AddToArray, RemoveFromArray, ReadFromArray, FetchDiscussions, FetchMessages, CreateUserProfileDocument, FetchAllUsernamesAndIds }

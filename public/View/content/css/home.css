@@ -108,6 +108,7 @@ section {
 }
 
 body {
+    font-family: 'Open Sans', sans-serif !important;
     line-height: 1.5;
     background-color: white;
 }
@@ -455,14 +456,14 @@ a.add img {
     font-weight: 500;
 }
 
-.msg-body ul li.repaly {
+.msg-body ul li.other {
     display: block;
     text-align: right;
     position: relative;
     margin: 5%;
 }
 
-.msg-body ul li.repaly:before {
+.msg-body ul li.other:before {
     display: block;
     clear: both;
     content: "";
@@ -479,7 +480,7 @@ a.add img {
     transform: rotate(37deg);
 }
 
-.msg-body ul li.repaly p {
+.msg-body ul li.other p {
     color: #fff;
     font-size: 14px;
     line-height: 1.5;
@@ -493,7 +494,7 @@ a.add img {
     margin-bottom: 0;
 }
 
-.msg-body ul li.repaly p b {
+.msg-body ul li.other p b {
     display: block;
     color: #061061;
     font-size: 14px;
@@ -501,7 +502,7 @@ a.add img {
     font-weight: 500;
 }
 
-.msg-body ul li.repaly:after {
+.msg-body ul li.other:after {
     display: block;
     content: "";
     clear: both;
@@ -515,7 +516,7 @@ a.add img {
     font-weight: 400;
 }
 
-li.repaly .time {
+li.other .time {
     margin-right: 20px;
 }
 
@@ -750,7 +751,7 @@ button:focus {
         border-top-right-radius: 6px;
         border-bottom-right-radius: 6px;
     }
-    .msg-body ul li.repaly p {
+    .msg-body ul li.other p {
         font-size: 13px;
         padding: 8px;
         border-top-left-radius: 6px;
