@@ -6,10 +6,10 @@
         <div id="navbarNav">
             <ul class="navbar-nav ms-auto">
                 <li class="nav-item">
-                    <a class="nav-link" href="?page=discussionsOpen">Discussions</a>
+                    <button class="nav-link" id="discussions_btn">Discussions</button>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="?page=profile">Profile</a>
+                    <button class="nav-link" id="profile_btn">Profile</button>
                 </li>
             </ul>
         </div>
@@ -48,53 +48,27 @@
                                     </ul>
                                 </div>
                                 <div class="modal-body">
-                                    <!-- chat-list -->
+                                    <!-- Discussions list -->
                                     <div class="chat-lists">
                                         <div class="tab-content" id="myTabContent">
                                             <div class="tab-pane fade show active" id="Open" role="tabpanel"
                                                  aria-labelledby="Open-tab">
-                                                <!-- chat-list -->
-                                                <div class="chat-list">
-                                                    <a href="#" class="d-flex align-items-center">
-                                                        <div class="flex-shrink-0">
-                                                            <img class="img-fluid"
-                                                                 src="https://mehedihtml.com/chatbox/assets/img/user.png"
-                                                                 alt="user img"/>
-                                                            <span class="active"></span>
-                                                        </div>
-                                                        <div class="flex-grow-1 ms-3">
-                                                            <h3>Discussion Name</h3>
-                                                            <p>last action :</p>
-                                                        </div>
-                                                    </a>
-                                                </div>
-                                                <!-- chat-list -->
+                                                <!-- Open discussion list -->
+                                                <div class="chat-list"></div>
+                                                <!-- Open discussion list -->
                                             </div>
                                             <div class="tab-pane fade" id="Archived" role="tabpanel"
                                                  aria-labelledby="Closed-tab">
-                                                <!-- chat-list -->
-                                                <div class="chat-list">
-                                                    <a href="#" class="d-flex align-items-center">
-                                                        <div class="flex-shrink-0">
-                                                            <img class="img-fluid"
-                                                                 src="https://mehedihtml.com/chatbox/assets/img/user.png"
-                                                                 alt="user img"/>
-                                                            <span class="active"></span>
-                                                        </div>
-                                                        <div class="flex-grow-1 ms-3">
-                                                            <h3>Mehedi Hasan</h3>
-                                                            <p>front end developer</p>
-                                                        </div>
-                                                    </a>
-                                                </div>
-                                                <!-- chat-list -->
+                                                <!-- Archive discussion list -->
+                                                <div class="chat-list"></div>
+                                                <!-- Archive discussion list -->
                                             </div>
                                         </div>
                                     </div>
-                                    <!-- chat-list -->
+                                    <!-- Discussions list -->
                                 </div>
                                 <div class="dropdown dropright add">
-                                    <img class="btn-primary dropdown-toggle img-fluid add" src="https://mehedihtml.com/chatbox/assets/img/add.svg" alt="add" data-toggle="dropdown">
+                                    <img role="button" class="btn-primary dropdown-toggle img-fluid add" src="https://mehedihtml.com/chatbox/assets/img/add.svg" alt="add" data-toggle="dropdown">
                                     <div class="dropdown-menu">
                                         <a class="dropdown-item" onclick="document.getElementById('addContact').style.display='block'" style="width:auto;">New Contact</a>
                                         <hr class="dropdown-divider"/>
@@ -145,29 +119,9 @@
                                 </div>
                                 <div class="modal-body">
                                     <div class="msg-body">
-                                        <ul>
-                                            <li class="sender">
-                                                <p> Hey, Are you there? </p>
-                                                <span class="time">10:16 am</span>
-                                            </li>
-                                            <li class="other">
-                                                <p>good!</p>
-                                                <span class="time">10:20 am</span>
-                                            </li>
-                                            <li>
-                                                <div class="divider">
-                                                    <h6>Today</h6>
-                                                </div>
-                                            </li>
-                                            <li class="other">
-                                                <p> yes, tell me</p>
-                                                <span class="time">10:36 am</span>
-                                            </li>
-                                            <li class="sender">
-                                                <p> Hey, Are you there? </p>
-                                                <span class="time">10:16 am</span>
-                                            </li>
-                                        </ul>
+                                        <!-- Message list -->
+                                        <ul></ul>
+                                        <!-- Message list -->
                                     </div>
                                 </div>
                                 <div class="send-box">
@@ -227,8 +181,9 @@
 <div id="addContact" class="modal">
     <form class="modal-content animate" id="addContact_form">
         <div class="container">
-            <label for="contact_username"><b>Contact Username</b></label>
-            <input type="text" placeholder="Enter Contact Username" name="contact_username" id="contact_username" required>
+            <label for="contact_email"><b>Contact Email</b></label>
+            <input type="text" placeholder="Enter Contact Username" name="contact_email" id="contact_email" required>
+            <button type="button" id="search_contact_button">Search</button>
             <div id="matching_usernames"></div> <!-- This div will display the matching usernames -->
             <button name="add_contact_btn" type="button" id="add_contact_btn">Add</button>
         </div>
