@@ -107,7 +107,7 @@ function FetchDiscussions(currentUserUid, discussionType, callback) {
 async function FetchMessages(discussionId, userId, display = true) {
     try {
         // Listen to messages from Firestore
-        const messagesRef = collection(db, "Discussions", discussionId, "Messages");
+        const messagesRef = collection(doc(db, "Discussions", discussionId), "Messages");
         const q = query(messagesRef, orderBy("Timestamp", "asc"));
 
         if (display) {
@@ -119,6 +119,7 @@ async function FetchMessages(discussionId, userId, display = true) {
                         const messageRef = doc(db, "Discussions", discussionId, "Messages", document.id);
                         batch.update(messageRef, {readBy: arrayUnion(userId)});
                     }
+                    console.log(document.data());
                     return {id: document.id, data: document.data()};
                 });
                 await batch.commit(); // Commit the batch update

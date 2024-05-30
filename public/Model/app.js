@@ -295,7 +295,7 @@ async function DisplayDiscussions(containerId) {
             discussionLink.addEventListener('click', async () => { // Add click event listener to load messages for the clicked discussion
                 if (currentDiscussionListener) {
                     // Unsubscribe from the previous listener
-                    currentDiscussionListener();
+                    currentDiscussionListener="";
                 }
                 currentDiscussionListener = FetchMessages(discussion.id, currentUser.uid); // Set the new listener
             });
