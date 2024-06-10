@@ -28,8 +28,10 @@ const db = getFirestore(app);// Initialize Cloud Firestore and get a reference t
 // Fetch discussions of a user from Firestore with real-time updates
 function FetchDiscussions(currentUserUid, discussionType, callback) {
     try {
-        let fieldName = 'discussions';
-        if (discussionType === 'Archived') {
+        let fieldName;
+        if (discussionType) {
+            fieldName = 'discussions';
+        }else {
             fieldName = 'archivedDiscussions';
         }
 
@@ -46,7 +48,6 @@ function FetchDiscussions(currentUserUid, discussionType, callback) {
                         const discussionData = discussionDoc.data();
 
                         const messagesData = await FetchMessages(discussionId, currentUserUid, false);
-                        console.log('Messages:', messagesData);
                         const unreadMessages = messagesData.filter(message => !message.data.readBy.includes(currentUserUid));
                         const unreadCount = unreadMessages.length;
 
@@ -106,50 +107,74 @@ function FetchDiscussions(currentUserUid, discussionType, callback) {
 // Fetch messages of a specific discussion from Firestore in real-time
 async function FetchMessages(discussionId, userId, display = true) {
     try {
-        // Listen to messages from Firestore
-        const messagesRef = collection(doc(db, "Discussions", discussionId), "Messages");
-        const q = query(messagesRef, orderBy("Timestamp", "asc"));
+        const messagesRef = collection(db, "Discussions", discussionId, "Messages");
+        const q = query(messagesRef, orderBy("timestamp", "asc"));
 
         if (display) {
             // Real-time listener for the messages
             return onSnapshot(q, async (querySnapshot) => {
                 const batch = writeBatch(db);
-                const messages = querySnapshot.docs.map(document => {
-                    if (Array.isArray(document.data().readBy) && !document.data().readBy.includes(userId)) {
+                const messages =  querySnapshot.docs.map(document => {
+                    const messageData = document.data();
+                    if (Array.isArray(messageData.readBy) && !messageData.readBy.includes(userId)) {
                         const messageRef = doc(db, "Discussions", discussionId, "Messages", document.id);
-                        batch.update(messageRef, {readBy: arrayUnion(userId)});
+                        batch.update(messageRef, { readBy: arrayUnion(userId) });
                     }
-                    console.log(document.data());
-                    return {id: document.id, data: document.data()};
+                    return { id: document.id, data: messageData };
                 });
                 await batch.commit(); // Commit the batch update
+
+                // Update the UI with the new messages
                 await DisplayMessages(messages);
             });
         } else {
-            // Fetch messages from Firestore
-            const messagesRef = collection(db, "Discussions", discussionId, "Messages");
-            const q = query(messagesRef, orderBy("Timestamp", "asc"));
-
-            const querySnapshot = await getDocs(q); // Fetch messages synchronously
-
+            // Fetch messages synchronously
+            const querySnapshot = await getDocs(q);
             const batch = writeBatch(db);
-            querySnapshot.forEach((document) => {
+            const messages = querySnapshot.docs.map(document => {
                 const messageData = document.data();
                 if (Array.isArray(messageData.readBy) && !messageData.readBy.includes(userId)) {
                     const messageRef = doc(db, "Discussions", discussionId, "Messages", document.id);
-                    batch.update(messageRef, {readBy: arrayUnion(userId)});
+                    batch.update(messageRef, { readBy: arrayUnion(userId) });
                 }
+                return { id: document.id, data: messageData };
             });
+
             await batch.commit(); // Commit the batch update
 
             // Return the array of message data
-            return querySnapshot.docs.map(doc => ({id: doc.id, data: doc.data()}));
+            return messages;
         }
     } catch (error) {
         console.error('Error fetching messages:', error);
         throw error;
     }
 }
+
+// Function to add a new message to Firestore
+async function AddMessage(discussionId, userId, messageText) {
+    try {
+        const db = getFirestore();
+        const messagesRef = collection(db, "Discussions", discussionId, "Messages");
+
+        // Create a new document with auto-generated ID
+        const newMessageRef = doc(messagesRef);
+
+        // Set the document fields
+        await setDoc(newMessageRef, {
+            auth: userId,
+            readBy: [userId], // Assuming the sender has read the message
+            text: messageText,
+            timestamp: serverTimestamp()
+        });
+
+        console.log("Message added:", messageText);
+    } catch (error) {
+        console.error("Error adding message:", error);
+    }
+}
+
+
 
 // Function to create a document in the "Users" collection
 async function CreateUserProfileDocument(user, userName) {
@@ -284,7 +309,6 @@ function CreateDiscussion(name, userId, members) {
     // Create a new document
     const newDoc = doc(collection(db, "Discussions"));
     setDoc(newDoc, {
-        lastMessageTimestamp: serverTimestamp,
         name: name,
         members: [],
     })
@@ -293,7 +317,7 @@ function CreateDiscussion(name, userId, members) {
             setDoc(newMessageDocRef, {
                 auth: userId,
                 text: "Welcome to " + name,
-                timestamp: serverTimestamp,
+                timestamp: serverTimestamp(),
             })
                 .then(() => {
                     console.log("Message Document successfully created!");
@@ -305,7 +329,7 @@ function CreateDiscussion(name, userId, members) {
 
             for (let i = 0; i < members.length; i++) {
                 // add the discussion id in the members user document
-                AddToArray("Users" ,members[i], "discussions", newDoc.id);
+                AddToArray("Users", members[i], "discussions", newDoc.id);
                 // add members in the new discussion document
                 AddToArray( "Discussions", newDoc.id, "members", members[i]);
             }
@@ -425,7 +449,7 @@ function ListenToDocField(collectionName, documentId, fieldName, callback) {
             if (userDoc.exists()) {
                 const fieldValue = userDoc.data()[fieldName];
 
-                // Return the field value as is
+                // Return the field value
                 console.log(`${fieldName}:`, fieldValue);
                 callback(fieldValue);
 
@@ -476,4 +500,4 @@ Removing from ArchivedDiscussions
 removeFromArray(userId, "ArchivedDiscussions", discussionId);
  */
 
-export { AddToArray, RemoveFromArray, ListenToDocField, FetchDiscussions, FetchMessages, CreateUserProfileDocument, FetchSomeUserDetails, CreateDiscussion}
+export { AddToArray, RemoveFromArray, ListenToDocField, FetchDiscussions, FetchMessages, CreateUserProfileDocument, FetchSomeUserDetails, CreateDiscussion, AddMessage}

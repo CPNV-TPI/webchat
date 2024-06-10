@@ -13,13 +13,15 @@ import {
     AddToArray,
     // RemoveFromArray,
     ListenToDocField,
-    CreateDiscussion
+    CreateDiscussion,
+    AddMessage
 } from "./firestore.js";
 
 //let currentDiscussionListener;
 let logged;
 let currentUser;
 let page;
+let discussionType = true;
 
 let selectedUsers = []; // Array to store selected users as objects with id and userName
 
@@ -47,24 +49,14 @@ function UpdatePage(newPage) {
 function DisplayPage() {
     // If 'page' is not present, redirect to '?page=discussionsOpen'
     if (!page) {
-        page = 'discussionsOpen'; // Set the default value to 'discussionsOpen'
+        page = 'discussions'; // Set the default value to 'discussions'
     }
 
     // Check the value of the 'page' and display the corresponding page
     switch (page) {
-        case "discussionsOpen":
+        case "discussions":
             // Display open discussions
-            DisplayDiscussions('Open')
-                .then(
-                    () => {
-                        // Scroll to the top of the page
-                        window.scrollTo({top: 0});
-                    }
-                )
-            break;
-        case "discussionsArchived":
-            // Display archived discussions
-            DisplayDiscussions('Archived')
+            DisplayDiscussions()
                 .then(
                     () => {
                         // Scroll to the top of the page
@@ -255,6 +247,9 @@ function ClearSelectedUsers() {
         checkbox.checked = false;
     });
 
+    const matchingUsernamesDiv = document.getElementById('matching_usernames');
+    matchingUsernamesDiv.innerHTML = ''; // Clear previous results
+
     console.log("Selected user IDs have been cleared.");
 }
 
@@ -270,19 +265,18 @@ async function DisplayProfileSettings() {
 }
 
 let currentDiscussionListener;
+let currentDiscussionId;
 
 // Display discussions
-async function DisplayDiscussions(containerId) {
+async function DisplayDiscussions() {
     try {
         const discussions = await new Promise((resolve, reject) => {
-            FetchDiscussions(currentUser.uid, containerId,(discussions) => {
+            FetchDiscussions(currentUser.uid, discussionType,(discussions) => {
                 resolve(discussions);
             });
         });
 
-        console.log("test:" + discussions);
-
-        const container = document.getElementById(containerId);
+        const container = document.getElementById("Discussions");
         container.innerHTML = ''; // Clear previous content
 
         discussions.forEach(discussion => {
@@ -295,9 +289,13 @@ async function DisplayDiscussions(containerId) {
             discussionLink.addEventListener('click', async () => { // Add click event listener to load messages for the clicked discussion
                 if (currentDiscussionListener) {
                     // Unsubscribe from the previous listener
-                    currentDiscussionListener="";
+                    currentDiscussionListener(); // Call the unsubscribe function
+                    currentDiscussionListener = null;
+                    console.log("Unsubscribed from previous listener");
                 }
-                currentDiscussionListener = FetchMessages(discussion.id, currentUser.uid); // Set the new listener
+                currentDiscussionListener = await FetchMessages(discussion.id, currentUser.uid); // Set the new listener
+                currentDiscussionId = discussion.id;
+                console.log("Subscribed to new listener : " + discussion.id);
             });
 
             const discussionImg = document.createElement('img');
@@ -337,34 +335,23 @@ async function DisplayDiscussions(containerId) {
 
 // Display messages of a discussion
 async function DisplayMessages(messages) {
-    console.log(messages);
 
     const msgBody = document.querySelector('.msg-body ul');
     msgBody.innerHTML = ''; // Clear previous messages
 
-    let LastMessageDay = null;
+    let LastMessageDate = null;
     messages.forEach(message => {
         const messageData = message.data;
 
-        const messageDate = new Date(messageData.timestamp); // Convert timestamp to Date object
-        const messageDay = messageDate.getDay(); // Get day as a string
-
-        console.log(messageData.timestamp);
-        console.log(new Date(messageData.timestamp));
-        console.log(new Date(messageData.timestamp * 1000));
-        console.log(new Date(messageData.timestamp * 1000).toLocaleString());
-        console.log(new Date(messageData.timestamp * 1000).toLocaleDateString());
-        console.log(new Date(messageData.timestamp * 1000).toLocaleTimeString());
-
-        console.log(messageDate + "|" + messageDay);
+        const messageDate = messageData.timestamp.toDate(); // Convert timestamp to Date object
 
         // Display date divider if it's a new date
-        if (messageDay !== LastMessageDay) {
+        if (messageDate.toLocaleDateString() !== LastMessageDate) {
             const divider = document.createElement('li');
             divider.classList.add('divider');
-            divider.innerHTML = `<h6>${messageDay}</h6>`;
+            divider.innerHTML = `<h6>${messageDate.toLocaleDateString()}</h6>`;
             msgBody.appendChild(divider);
-            LastMessageDay = messageDay;
+            LastMessageDate = messageDate.toLocaleDateString();
         }
 
         // Create message element
@@ -383,7 +370,7 @@ document.addEventListener('DOMContentLoaded', function () {
             currentUser = user;
             UpdateLoginStatus(true)
             console.log("user logged in");
-            UpdatePage('discussionsOpen');
+            UpdatePage('discussions');
         } else {
             currentUser = "";
             UpdateLoginStatus(false)
@@ -404,6 +391,12 @@ document.addEventListener('DOMContentLoaded', function () {
         // Check if the clicked element has an id
         if (event.target && event.target.id) {
             const targetId = event.target.id;
+
+            // Define the buttons you want to toggle the "active" class for
+            const tabs = document.querySelectorAll('#Open-tab, #Archived-tab');
+            // Remove the "active" class from all buttons
+            tabs.forEach(tab => tab.classList.remove('active'));
+
             switch (targetId) {
                 case 'register_btn':
                     // Validate and register user
@@ -424,7 +417,14 @@ document.addEventListener('DOMContentLoaded', function () {
                     Logout();
                     break;
                 case 'send_msg_btn':
-                    //SendMessage();
+                    const inputElement = document.getElementById('sendMsgInput');
+                    const messageText = inputElement.value.trim();
+
+                    if (messageText) {
+                        await AddMessage(currentDiscussionId, currentUser.uid, messageText);
+                        // Clear the input field after sending the message
+                        inputElement.value = '';
+                    }
                     break;
                 case 'search_contact_button':
                     const input = document.getElementById('contact_email').value;
@@ -442,11 +442,17 @@ document.addEventListener('DOMContentLoaded', function () {
                     CreateDiscussions();
                     break;
                 case 'discussions_btn':
+                    UpdatePage('discussions');
+                    break;
                 case 'Open-tab':
-                    UpdatePage('discussionsOpen');
+                    discussionType = true;
+                    event.target.classList.add('active');
+                    UpdatePage('discussions');
                     break;
                 case 'Archived-tab':
-                    UpdatePage('discussionsArchived');
+                    discussionType = false;
+                    event.target.classList.add('active');
+                    UpdatePage('discussions');
                     break;
                 case 'profile_btn':
                     UpdatePage('profile');
