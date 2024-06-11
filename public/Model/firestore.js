@@ -21,7 +21,7 @@ import {
     where,
     writeBatch
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
-import { DisplayMessages } from "./app.js";
+import {DisplayMessages} from "./app.js";
 
 const db = getFirestore(app);// Initialize Cloud Firestore and get a reference to the service
 
@@ -130,20 +130,10 @@ async function FetchMessages(discussionId, userId, display = true) {
         } else {
             // Fetch messages synchronously
             const querySnapshot = await getDocs(q);
-            const batch = writeBatch(db);
-            const messages = querySnapshot.docs.map(document => {
-                const messageData = document.data();
-                if (Array.isArray(messageData.readBy) && !messageData.readBy.includes(userId)) {
-                    const messageRef = doc(db, "Discussions", discussionId, "Messages", document.id);
-                    batch.update(messageRef, { readBy: arrayUnion(userId) });
-                }
-                return { id: document.id, data: messageData };
-            });
-
-            await batch.commit(); // Commit the batch update
-
             // Return the array of message data
-            return messages;
+            return querySnapshot.docs.map(document => {
+                return {id: document.id, data: document.data()};
+            });
         }
     } catch (error) {
         console.error('Error fetching messages:', error);

@@ -99,7 +99,7 @@ function GoogleLogin() {
  * Function to log out
  */
 function Logout() {
-    signOut()
+    signOut(auth)
         .then(() => {// Sign-out successful.
             console.log("SignOUT successful");
             //window.location.href = '#loginOrRegister';

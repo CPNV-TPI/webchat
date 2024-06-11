@@ -11,6 +11,9 @@
                 <li class="nav-item">
                     <button class="nav-link" id="profile_btn">Profile</button>
                 </li>
+                <li class="nav-item">
+                    <button class="nav-link" id="logout_btn">Logout</button>
+                </li>
             </ul>
         </div>
     </div>
@@ -176,7 +179,7 @@
     <form class="modal-content animate" id="addContact_form">
         <div class="container">
             <label for="contact_email"><b>Contact Email</b></label>
-            <input type="text" placeholder="Enter Contact Username" name="contact_email" id="contact_email" required>
+            <input type="text" placeholder="Enter Contact Email" name="contact_email" id="contact_email" required>
             <button type="button" id="search_contact_button">Search</button>
             <div id="matching_usernames"></div> <!-- This div will display the matching usernames -->
             <button name="add_contact_btn" type="button" id="add_contact_btn">Add</button>
@@ -194,7 +197,8 @@
             <label for="discussion_name"><b>Discussion name</b></label>
             <input type="text" placeholder="Enter discussion name" name="discussion_name" id="discussion_name" required>
             <label for="contact_username_to_add">Members</label>
-            <input type="text" placeholder="Enter the username of the contact you wan to add as Member of the discussion" name="contact_username" id="contact_username_to_add" required>
+            <input type="text" placeholder="Enter Contact Email" name="contact_username" id="contact_username_to_add" required>
+            <button type="button" id="search_contact_button2">Search</button>
             <div id="matching_contacts"></div> <!-- This div will display matching contacts -->
             <button name="login_btn" type="button" id="login_btn">Create</button>
         </div>

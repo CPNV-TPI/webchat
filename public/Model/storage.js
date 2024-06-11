@@ -1,9 +1,7 @@
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js';
 import {app} from "./initializeFirebase.js";
 
-
 const storage = getStorage(app);
-
 
 function UploadFile(file) {
     // Upload file and metadata to the object 'images/mountains.jpg'
